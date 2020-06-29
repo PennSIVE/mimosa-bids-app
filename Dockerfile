@@ -1,16 +1,15 @@
-FROM bids/base_fsl
+FROM pennsive/neuror:4.0
 
-# Install python, nibabel and numpy (nibabel>=2.1 requires python>=3.5, ubuntu trusty has only python 3.4)
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-numpy && \
-    pip3 install nibabel==2.0 && \
-    apt-get remove -y python3-pip && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt-get install -y python3 nodejs npm && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    npm install -g bids-validator@0.19.2
 
 ENV PYTHONPATH=""
 
-COPY run.py /run.py
-
-COPY version /version
+COPY . /
 
 ENTRYPOINT ["/run.py"]
+
+# docker build -t pennsive/mimosa:latest .
+# docker run -v ~/Downloads/mscamras/sites/NIH:/bids_dataset:ro -v $PWD/out:/out pennsive/mimosa:latest /bids_dataset /out participant

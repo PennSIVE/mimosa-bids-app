@@ -2,12 +2,11 @@
 import argparse
 import os
 import subprocess
-import nibabel
-import numpy
 from glob import glob
 
 __version__ = open(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 'version')).read()
+
 
 def run(command, env={}):
     merged_env = os.environ
@@ -22,9 +21,11 @@ def run(command, env={}):
         if line == '' and process.poll() != None:
             break
     if process.returncode != 0:
-        raise Exception("Non zero return code: %d"%process.returncode)
+        raise Exception("Non zero return code: %d" % process.returncode)
 
-parser = argparse.ArgumentParser(description='Example BIDS App entrypoint script.')
+
+parser = argparse.ArgumentParser(
+    description='Example BIDS App entrypoint script.')
 parser.add_argument('bids_dir', help='The directory with the input dataset '
                     'formatted according to the BIDS standard.')
 parser.add_argument('output_dir', help='The directory where the output files '
@@ -50,7 +51,7 @@ parser.add_argument('-v', '--version', action='version',
 args = parser.parse_args()
 
 if not args.skip_bids_validator:
-    run('bids-validator %s'%args.bids_dir)
+    run('bids-validator %s' % args.bids_dir)
 
 subjects_to_analyze = []
 # only for a subset of subjects
@@ -59,28 +60,24 @@ if args.participant_label:
 # for all subjects
 else:
     subject_dirs = glob(os.path.join(args.bids_dir, "sub-*"))
-    subjects_to_analyze = [subject_dir.split("-")[-1] for subject_dir in subject_dirs]
+    subjects_to_analyze = [subject_dir.split(
+        "-")[-1] for subject_dir in subject_dirs]
 
 # running participant level
 if args.analysis_level == "participant":
 
-    # find all T1s and skullstrip them
     for subject_label in subjects_to_analyze:
-        for T1_file in glob(os.path.join(args.bids_dir, "sub-%s"%subject_label,
-                                         "anat", "*_T1w.nii*")) + glob(os.path.join(args.bids_dir,"sub-%s"%subject_label,"ses-*","anat", "*_T1w.nii*")):
-            out_file = os.path.split(T1_file)[-1].replace("_T1w.", "_brain.")
-            cmd = "bet %s %s"%(T1_file, os.path.join(args.output_dir, out_file))
-            print(cmd)
-            run(cmd)
-
-# running group level
-elif args.analysis_level == "group":
-    brain_sizes = []
-    for subject_label in subjects_to_analyze:
-        for brain_file in glob(os.path.join(args.output_dir, "sub-%s*.nii*"%subject_label)):
-            data = nibabel.load(brain_file).get_data()
-            # calcualte average mask size in voxels
-            brain_sizes.append((data != 0).sum())
-
-    with open(os.path.join(args.output_dir, "avg_brain_size.txt"), 'w') as fp:
-        fp.write("Average brain size is %g voxels"%numpy.array(brain_sizes).mean())
+        # just grab the first t1/flair
+        t1 = (
+            glob(os.path.join(args.bids_dir, "sub-%s" % subject_label, "anat", "*_T1w.nii*")) +
+            glob(os.path.join(args.bids_dir, "sub-%s" %
+                 subject_label, "ses-*", "anat", "*_T1w.nii*"))
+            )[0]
+        flair = (
+            glob(os.path.join(args.bids_dir, "sub-%s" % subject_label, "anat", "*_FLAIR.nii*")) +
+            glob(os.path.join(args.bids_dir, "sub-%s" %
+                 subject_label, "ses-*", "anat", "*_FLAIR.nii*"))
+            )[0]
+        out_file = os.path.split(t1)[-1].replace("_T1w.", "_mimosa.")
+        cmd = "/run.R --outdir %s --indir %s --flair %s --t1 %s" % (os.path.join(args.output_dir, out_file), os.path.dirname(t1), os.path.basename(flair), os.path.basename(t1))
+        run(cmd)
