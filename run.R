@@ -9,44 +9,51 @@ p <- arg_parser("Run MIMoSA")
 # Add command line arguments
 p <- add_argument(p, "--outdir", help = "Output directory", default = "/tmp")
 p <- add_argument(p, "--indir", help = "Input directory", default = "/data")
-p <- add_argument(p, "--flair", help = "FLAIR files", default = "flair1_reg_to_mprage1_brain_ws.nii.gz")
-p <- add_argument(p, "--t1", help = "Use PD files to generate model", default = "MPRAGE_SAG_TFL_n4_brain_ws.nii.gz")
+p <- add_argument(p, "--flair", help = "FLAIR image", default = "flair.nii.gz")
+p <- add_argument(p, "--t1", help = "T1 image", default = "t1.nii.gz")
+p <- add_argument(p, "--thresh", help = "Threshold to binarize probability map", default = "0.2")
 # Parse the command line arguments
 argv <- parse_args(p)
 
-# cores = as.numeric(Sys.getenv("CORES"))
-# if (is.na(cores)) {
-#   cores = 1
-# }
+load("/models/mimosa_model.RData")
 
-create_brain_mask = function(...) {
-  x = list(...)
-  x = check_nifti(x)
-  x = lapply(x, function(img) {
-    img > 0
-  })
-  mask = Reduce("|", x)
-  mask = datatyper(mask)
-  mask
+cores = as.numeric(Sys.getenv("CORES"))
+if (is.na(cores)) {
+  cores = 1
 }
 
-outdir <- argv$outdir #"/tmp"
-# brainmask_reg <- "/data/MPRAGE_SAG_TFL_n4_brain.nii.gz"
-flair_n4_brain_ws <- paste0(argv$indir, "/", argv$flair) #"/data/flair1_reg_to_mprage1_brain_ws.nii.gz"
-t1_n4_reg_brain_ws <- paste0(argv$indir, "/", argv$t1) #"/data/MPRAGE_SAG_TFL_n4_brain_ws.nii.gz"
-brainmask_reg <- create_brain_mask(readnii(flair_n4_brain_ws), readnii(t1_n4_reg_brain_ws))
-mimosa = mimosa_data(brain_mask=brainmask_reg, FLAIR=flair_n4_brain_ws, T1=t1_n4_reg_brain_ws, gold_standard=NULL, normalize="no")
-mimosa_df = mimosa$mimosa_dataframe
-# saveRDS(mimosa, paste0(outdir,"/mimosa_scan1.RData"))
-cand_voxels = mimosa$top_voxels
-tissue_mask = mimosa$tissue_mask
-# Fit MIMoSA model with training data
-load("/models/mimosa_model.RData")
-# Apply model to test image
-predictions_WS = predict(mimosa_model, mimosa_df, type="response")
-predictions_nifti_WS = niftiarr(cand_voxels, 0)
-predictions_nifti_WS[cand_voxels==1] = predictions_WS
-prob_map_WS = fslsmooth(predictions_nifti_WS, sigma = 1.25, mask=tissue_mask, retimg=TRUE, smooth_mask=TRUE) # probability map
-writenii(prob_map_WS, paste0(outdir,"/mimosa_prob_map_scan1")) # write out probability map
-lesion_binary_mask = (prob_map_WS >= .2) # threshold at p-hat = .2 to get binary lesion mask
-writenii(lesion_binary_mask, paste0(outdir,"/mimosa_binary_mask_0.2_scan1"))
+
+outdir <- argv$outdir
+flair <- readnii(paste0(argv$indir, "/", argv$flair))
+t1 <- readnii(paste0(argv$indir, "/", argv$t1))
+brainmask <- t1 > min(t1)
+
+mimosa_testdata = mimosa_data(
+  brain_mask = brainmask,
+  FLAIR = flair,
+  T1 = t1,
+  tissue = FALSE,
+  cores = cores,
+  verbose = T)
+
+mimosa_testdata_df = mimosa_testdata$mimosa_dataframe
+mimosa_candidate_mask = mimosa_testdata$top_voxels
+
+predictions = predict(mimosa_model,
+                      newdata = mimosa_testdata_df,
+                      type = "response")
+
+probability_map = niftiarr(brainmask.cur, 0)
+probability_map[mimosa_candidate_mask == 1] = predictions
+
+probability_map = fslsmooth(probability_map,
+                            sigma = 1.25,
+                            mask = brainmask.cur,
+                            retimg = TRUE,
+                            smooth_mask = TRUE)
+writenii(probability_map, paste0(outdir,
+                                 "/probability_map.nii.gz"))
+
+thresh = as.numeric(argv$thresh)
+lesmask = probability_map > thresh
+writenii(lesmask, paste0(outdir, "/mimosa_binary_mask_", argv$thresh, ".nii.gz"))
