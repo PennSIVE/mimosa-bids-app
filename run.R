@@ -43,12 +43,12 @@ predictions = predict(mimosa_model,
                       newdata = mimosa_testdata_df,
                       type = "response")
 
-probability_map = niftiarr(brainmask.cur, 0)
+probability_map = niftiarr(brainmask, 0)
 probability_map[mimosa_candidate_mask == 1] = predictions
 
 probability_map = fslsmooth(probability_map,
                             sigma = 1.25,
-                            mask = brainmask.cur,
+                            mask = brainmask,
                             retimg = TRUE,
                             smooth_mask = TRUE)
 writenii(probability_map, paste0(outdir,
