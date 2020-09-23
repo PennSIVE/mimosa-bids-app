@@ -15,7 +15,11 @@ p <- add_argument(p, "--thresh", help = "Threshold to binarize probability map",
 # Parse the command line arguments
 argv <- parse_args(p)
 
-load("/models/mimosa_model.RData")
+if (file.exists("/models/mimosa_model.RData")) {
+  load("/models/mimosa_model.RData")
+} else {
+  mimosa_model <- mimosa::mimosa_model_No_PD_T2
+}
 
 cores = as.numeric(Sys.getenv("CORES"))
 if (is.na(cores)) {
