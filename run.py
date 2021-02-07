@@ -42,6 +42,9 @@ parser.add_argument('--participant_label', help='The label(s) of the participant
                    'provided all subjects should be analyzed. Multiple '
                    'participants can be specified with a space separated list.',
                    nargs="+")
+parser.add_argument('--t1_label', help="label of T1 image", nargs='?', default="T1w")
+parser.add_argument('--flair_label', help="label of FLAIR image", nargs='?', default="FLAIR")
+parser.add_argument('--debug', help='Write out additional debug output', action='store_true')
 parser.add_argument('--skip_bids_validator', help='Whether or not to perform BIDS dataset validation',
                    action='store_true')
 parser.add_argument('-v', '--version', action='version',
@@ -69,15 +72,18 @@ if args.analysis_level == "participant":
     for subject_label in subjects_to_analyze:
         # just grab the first t1/flair
         t1 = (
-            glob(os.path.join(args.bids_dir, "sub-%s" % subject_label, "anat", "*_T1w.nii*")) +
+            glob(os.path.join(args.bids_dir, "sub-%s" % subject_label, "anat", "*_%s.nii*" % args.t1_label)) +
             glob(os.path.join(args.bids_dir, "sub-%s" %
-                 subject_label, "ses-*", "anat", "*_T1w.nii*"))
+                 subject_label, "ses-*", "anat", "*_%s.nii*" % args.t1_label))
             )[0]
         flair = (
-            glob(os.path.join(args.bids_dir, "sub-%s" % subject_label, "anat", "*_FLAIR.nii*")) +
+            glob(os.path.join(args.bids_dir, "sub-%s" % subject_label, "anat", "*_%s.nii*" % args.flair_label)) +
             glob(os.path.join(args.bids_dir, "sub-%s" %
-                 subject_label, "ses-*", "anat", "*_FLAIR.nii*"))
+                 subject_label, "ses-*", "anat", "*_%s.nii*" % args.flair_label))
             )[0]
-        out_file = os.path.split(t1)[-1].replace("_T1w.", "_mimosa.")
-        cmd = "/run.R --outdir %s --indir %s --flair %s --t1 %s" % (os.path.join(args.output_dir, out_file), os.path.dirname(t1), os.path.basename(flair), os.path.basename(t1))
+        out_file = os.path.split(t1)[-1].replace("_%s." % args.t1_label, "_mimosa.")
+        print("Reading from %s, writing to %s" % (args.output_dir, os.path.dirname(t1)))
+        cmd = "/run.R --outdir %s --indir %s --flair %s --t1 %s" % (args.output_dir, os.path.dirname(t1), os.path.basename(flair), os.path.basename(t1))
+        if args.debug:
+            cmd += " --debug"
         run(cmd)

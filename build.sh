@@ -4,7 +4,7 @@ set -e
 
 R_VERSION_MAJOR=4
 R_VERSION_MINOR=0
-R_VERSION_PATCH=2
+R_VERSION_PATCH=3
 CONFIGURE_OPTIONS="--with-cairo --with-jpeglib --enable-R-shlib --with-blas --with-lapack"
 
 docker run --rm repronim/neurodocker:0.7.0 generate docker \
