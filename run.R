@@ -1,8 +1,11 @@
 #!/usr/bin/env Rscript
 library(argparser)
 library(neurobase)
+library(ANTsR)
+library(extrantsr)
 library(mimosa)
 library(fslr)
+library(WhiteStripe)
 
 # # Create a parser
 p <- arg_parser("Run MIMoSA")
@@ -12,7 +15,12 @@ p <- add_argument(p, "--indir", help = "Input directory", default = "/data")
 p <- add_argument(p, "--flair", help = "FLAIR image", default = "flair.nii.gz")
 p <- add_argument(p, "--t1", help = "T1 image", default = "t1.nii.gz")
 p <- add_argument(p, "--thresh", help = "Threshold to binarize probability map", default = "0.2")
-p <- add_argument(p, "--debug", help="Write out addtional debug output", flag = TRUE, default = FALSE)
+p <- add_argument(p, "--strip", help = "Skull strip inputs (can pick from 'bet', 'mass', or empty string to imply input is already skull stripped)", default = "")
+p <- add_argument(p, "--brainmask", help = "Use a pre-computed binary segmenation mask to (overriden is --strip is set)", default = "")
+p <- add_argument(p, "--debug", help="Write out addtional debug output", flag = TRUE)
+p <- add_argument(p, "--n4", help="Whether to N4 correct input", flag = TRUE)
+p <- add_argument(p, "--register", help="Whether to register FLAIR to T1", flag = TRUE)
+p <- add_argument(p, "--whitestripe", help="Whether to run WhiteStripe", flag = TRUE)
 # Parse the command line arguments
 argv <- parse_args(p)
 
@@ -31,7 +39,69 @@ if (is.na(cores)) {
 outdir <- argv$outdir
 flair <- readnii(paste0(argv$indir, "/", argv$flair))
 t1 <- readnii(paste0(argv$indir, "/", argv$t1))
-brainmask <- t1 > min(t1)
+
+setwd(outdir)
+
+# n4 correct
+if (argv$n4) {
+  flair <- bias_correct(file = flair, correction = "N4")
+  t1 <- bias_correct(file = t1, correction = "N4")
+  if (argv$debug) {
+    writenii(flair, "flair_n4")
+    writenii(t1, "t1_n4")
+  }
+}
+
+# register n4 flair to n4 t1
+if (argv$register) {
+  flair <- registration(filename = flair, template.file = t1, typeofTransform = "Rigid", interpolator = "Linear")$outfile
+  if (argv$debug) {
+    writenii(flair, "flair_n4_reg2t1n4")
+  }
+}
+
+# skull strip inputs
+if (argv$strip == "bet") {
+  t1 <- fslbet_robust(t1, remover = "double_remove_neck", correct = TRUE, correction = "N4", recog = TRUE)
+  brainmask <- t1 > 0 
+  flair <- flair * brainmask
+} else if (argv$strip == "mass") {
+  if (!argv$debug) {
+    writenii(t1, 't1_n4')
+  }
+  system(paste0("mass -in ", outdir, "/t1_n4.nii.gz -dest ", outdir, " -ref /opt/mass-1.1.1/data/Templates/WithCerebellum -NOQ"))
+  if (!argv$debug) {
+    file.remove('t1_n4.nii.gz')
+  }
+  t1 <- readnii("t1_n4_brain.nii.gz")
+  brainmask <- t1 > 0 
+  flair <- flair * brainmask
+} else if (file.exists(argv$brainmask)) { # inputs not skull stripped, but mask provided
+  brainmask <- readnii(paste0(argv$indir, "/", argv$brainmask))
+  t1 <- t1 * brainmask
+  flair <- flair * brainmask
+} else { # assume inputs already skull stripped
+  brainmask <- t1 > min(t1)
+}
+if (argv$debug) {
+  writenii(t1, "t1_ss")
+  writenii(flair, "flair_ss")
+  writenii(brainmask, "brainmask")
+}
+
+# whitestripe
+if (argv$whitestripe) {
+  t1_ind <- whitestripe(t1, "T1")
+  t1 <- whitestripe_norm(t1, t1_ind$whitestripe.ind)
+  flair_ind <- whitestripe(flair, "T2")
+  flair <- whitestripe_norm(flair, flair_ind$whitestripe.ind)
+  if (argv$debug) {
+    writenii(t1, 't1_ws')
+    writenii(flair, 'flair_ws')
+  }
+}
+
+# preprocessing done, now mimosa
 
 mimosa_testdata = mimosa_data(
   brain_mask = brainmask,
