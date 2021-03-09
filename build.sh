@@ -7,7 +7,8 @@ R_VERSION_MINOR=0
 R_VERSION_PATCH=3
 CONFIGURE_OPTIONS="--with-cairo --with-jpeglib --enable-R-shlib --with-blas --with-lapack"
 
-docker run --rm repronim/neurodocker:0.7.0 generate docker \
+docker pull repronim/neurodocker:master
+docker run --rm repronim/neurodocker:master generate docker \
     --pkg-manager apt \
     --base debian:buster \
     --fsl version=6.0.3 \
@@ -48,6 +49,7 @@ docker run --rm repronim/neurodocker:0.7.0 generate docker \
             libglu1-mesa-dev \
             libglu1-mesa-dev \
             libtiff5-dev \
+            multiarch-support \
             && wget https://cran.rstudio.com/src/base/R-${R_VERSION_MAJOR}/R-${R_VERSION_MAJOR}.${R_VERSION_MINOR}.${R_VERSION_PATCH}.tar.gz \
             && tar zxvf R-${R_VERSION_MAJOR}.${R_VERSION_MINOR}.${R_VERSION_PATCH}.tar.gz \
             && rm R-${R_VERSION_MAJOR}.${R_VERSION_MINOR}.${R_VERSION_PATCH}.tar.gz \
@@ -55,6 +57,13 @@ docker run --rm repronim/neurodocker:0.7.0 generate docker \
             && ./configure ${CONFIGURE_OPTIONS} \ 
             && make \
             && make install" \
+            --afni version=latest \
+            --ants version=2.3.4 \
     | docker build -t mimosa_base -
 
 docker build -t pennsive/mimosa:latest .
+id=$(docker images --format="{{.Repository}}:{{.Tag}} {{.ID}}" | egrep "^pennsive/mimosa:latest " | cut -d' ' -f2)
+version=$(cat version)
+docker tag $id pennsive/mimosa:$version
+docker push pennsive/mimosa:latest
+docker push pennsive/mimosa:$version

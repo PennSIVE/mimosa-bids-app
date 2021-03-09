@@ -62,17 +62,12 @@ if (argv$register) {
 
 # skull strip inputs
 if (argv$strip == "bet") {
-  t1 <- fslbet_robust(t1, remover = "double_remove_neck", correct = TRUE, correction = "N4", recog = TRUE)
+  t1 <- fslbet_robust(t1, remover = "double_remove_neck", correct = FALSE, recog = TRUE)
   brainmask <- t1 > 0 
   flair <- flair * brainmask
 } else if (argv$strip == "mass") {
-  if (!argv$debug) {
-    writenii(t1, 't1_n4')
-  }
-  system(paste0("mass -in ", outdir, "/t1_n4.nii.gz -dest ", outdir, " -ref /opt/mass-1.1.1/data/Templates/WithCerebellum -NOQ"))
-  if (!argv$debug) {
-    file.remove('t1_n4.nii.gz')
-  }
+  writenii(t1, 't1_n4')
+  system(paste0("mass -in ", outdir, "/t1_n4.nii.gz -dest ", outdir, " -ref /opt/mass-1.1.1/data/Templates/WithCerebellum -NOQ"), intern = TRUE)
   t1 <- readnii("t1_n4_brain.nii.gz")
   brainmask <- t1 > 0 
   flair <- flair * brainmask
