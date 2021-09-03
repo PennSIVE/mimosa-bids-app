@@ -3,8 +3,8 @@
 set -e
 
 R_VERSION_MAJOR=4
-R_VERSION_MINOR=0
-R_VERSION_PATCH=3
+R_VERSION_MINOR=1
+R_VERSION_PATCH=0
 CONFIGURE_OPTIONS="--with-cairo --with-jpeglib --enable-R-shlib --with-blas --with-lapack"
 
 docker pull repronim/neurodocker:master
