@@ -245,10 +245,6 @@ if args.analysis_level == "participant":
                 cmd += " --whitestripe"
             if args.debug:
                 cmd += " --debug"
-                print(
-                    "Reading from %s, writing to %s"
-                    % (args.output_dir, os.path.dirname(sorted_t1s[i]))
-                )
                 print(cmd)
             run(cmd)
 else:

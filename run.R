@@ -67,7 +67,7 @@ if (argv$strip == "bet") {
   flair <- flair * brainmask
 } else if (argv$strip == "mass") {
   writenii(t1, 't1_n4')
-  system(paste0("mass -in ", outdir, "/t1_n4.nii.gz -dest ", outdir, " -ref /opt/mass-1.1.1/data/Templates/WithCerebellum -NOQ"), intern = TRUE)
+  system(paste0("mass -in t1_n4.nii.gz -dest ", getwd(), " -ref /opt/mass-1.1.1/data/Templates/WithCerebellum -NOQ"), intern = TRUE)
   t1 <- readnii("t1_n4_brain.nii.gz")
   brainmask <- t1 > 0 
   flair <- flair * brainmask
@@ -107,7 +107,7 @@ mimosa_testdata = mimosa_data(
   verbose = T)
 
 if (argv$debug) {
-  save(mimosa_testdata, file = paste0(outdir, "/mimosa.RData"))
+  save(mimosa_testdata, file = "mimosa.RData")
 }
 
 mimosa_testdata_df = mimosa_testdata$mimosa_dataframe
@@ -117,7 +117,7 @@ predictions = predict(mimosa_model,
                       newdata = mimosa_testdata_df,
                       type = "response")
 if (argv$debug) {
-  save(predictions, file = paste0(outdir, "/pred.RData"))
+  save(predictions, file = "pred.RData")
 }
 
 probability_map = niftiarr(brainmask, 0)
@@ -129,10 +129,9 @@ probability_map = fslsmooth(probability_map,
                             retimg = TRUE,
                             smooth_mask = TRUE)
 message(paste0("writing probability map to ", outdir, "/probability_map.nii.gz"))
-writenii(probability_map, paste0(outdir,
-                                 "/probability_map.nii.gz"))
+writenii(probability_map, "probability_map.nii.gz")
 
 thresh = as.numeric(argv$thresh)
 lesmask = probability_map > thresh
 message(paste0("writing binary mask to ", outdir, "/mimosa_binary_mask_", argv$thresh, ".nii.gz"))
-writenii(lesmask, paste0(outdir, "/mimosa_binary_mask_", argv$thresh, ".nii.gz"))
+writenii(lesmask, paste0("mimosa_binary_mask_", argv$thresh, ".nii.gz"))
