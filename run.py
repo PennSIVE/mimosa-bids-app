@@ -83,6 +83,8 @@ def _filter_pybids_none_any(dct):
 
 
 def extract_run(s):
+    if "run-" not in s:
+        return 0
     return int(re.search(r"run-([0-9]+)", s)[1])
 
 
@@ -227,10 +229,19 @@ if args.analysis_level == "participant":
                 sorted_flairs.append(ses_flairs[i])
                 print("Pairing", ses_t1s[i], "with", ses_flairs[i])
 
+        outdir_suffix = ""
         for i in range(len(sorted_t1s)):
+            if len(sorted_t1s) > 1:
+                if "ses-" in sorted_t1s[i]:
+                    outdir_suffix = "_" + re.search(r"ses-[0-9a-zA-Z]+", sorted_t1s[i])[0]
+                    if "run-" in sorted_t1s[i]:
+                        outdir_suffix += "_" + re.search(r"run-[0-9]+", sorted_t1s[i])[0]
+                else:
+                    outdir_suffix = "_%d" % i
             out_file = os.path.split(sorted_t1s[i])[-1].replace("_T1w.", "_mimosa.")
+            Path(args.output_dir + outdir_suffix).mkdir(parents=True, exist_ok=True)
             cmd = "/run.R --outdir %s --indir %s --flair %s --t1 %s --strip %s --thresh %s" % (
-                args.output_dir,
+                args.output_dir + outdir_suffix,
                 os.path.dirname(sorted_t1s[i]),
                 os.path.basename(sorted_flairs[i]),
                 os.path.basename(sorted_t1s[i]),
