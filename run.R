@@ -17,9 +17,10 @@ p <- add_argument(p, "--t1", help = "T1 image", default = "t1.nii.gz")
 p <- add_argument(p, "--thresh", help = "Threshold to binarize probability map", default = "0.2")
 p <- add_argument(p, "--strip", help = "Skull strip inputs (can pick from 'bet', 'mass', or empty string to imply input is already skull stripped)", default = "")
 p <- add_argument(p, "--brainmask", help = "Use a pre-computed binary segmenation mask to (overriden is --strip is set)", default = "")
+p <- add_argument(p, "--register-to", help="Specify 'T1' to register FLAIR to T1, specify 'FLAIR' to register T1 to FLAIR, or specify none to skip registration", default = "T1")
 p <- add_argument(p, "--debug", help="Write out addtional debug output", flag = TRUE)
 p <- add_argument(p, "--n4", help="Whether to N4 correct input", flag = TRUE)
-p <- add_argument(p, "--register", help="Whether to register FLAIR to T1", flag = TRUE)
+
 p <- add_argument(p, "--whitestripe", help="Whether to run WhiteStripe", flag = TRUE)
 # Parse the command line arguments
 argv <- parse_args(p)
@@ -52,11 +53,18 @@ if (argv$n4) {
   }
 }
 
-# register n4 flair to n4 t1
-if (argv$register) {
+if (tolower(argv$register) == "t1") {
+  # register n4 flair to n4 t1
   flair <- registration(filename = flair, template.file = t1, typeofTransform = "Rigid", interpolator = "Linear")$outfile
   if (argv$debug) {
     writenii(flair, "flair_n4_reg2t1n4")
+  }
+}
+if (tolower(argv$register) == "flair") {
+  # register n4 t1 to n4 flair
+  t1 <- registration(filename = t1, template.file = flair, typeofTransform = "Rigid", interpolator = "Linear")$outfile
+  if (argv$debug) {
+    writenii(flair, "t1_n4_reg2flairn4")
   }
 }
 

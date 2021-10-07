@@ -5,9 +5,9 @@ Usage:
 ```
 usage: run.py [-h]
               [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
-              [--strip [{bet,mass,}]] [--thresh [THRESH]] [--n4] [--register]
-              [--whitestripe] [--debug] [--bids-filter-file FILE]
-              [--skip_bids_validator] [-v]
+              [--strip [{bet,mass,}]] [--thresh [THRESH]] [--n4]
+              [--register-to [{T1,FLAIR,none}]] [--whitestripe] [--debug]
+              [--bids-filter-file FILE] [--skip_bids_validator] [-v]
               bids_dir output_dir {participant,group}
 
 MIMoSA entrypoint script
@@ -37,7 +37,10 @@ optional arguments:
                         empty string to imply input is already skull stripped)
   --thresh [THRESH]     Threshold for binary segmentation mask
   --n4                  Whether to N4 correct input
-  --register            Whether to register to T1
+  --register-to [{T1,FLAIR,none}]
+                        Specify 'T1' to register FLAIR to T1, specify 'FLAIR'
+                        to register T1 to FLAIR, or specify none to skip
+                        registration
   --whitestripe         Whether to run WhiteStripe
   --debug               Write out additional debug output
   --bids-filter-file FILE

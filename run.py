@@ -148,7 +148,14 @@ parser.add_argument(
     "--thresh", help="Threshold for binary segmentation mask", nargs="?", default=0.2
 )
 parser.add_argument("--n4", help="Whether to N4 correct input", action="store_true")
-parser.add_argument("--register", help="Whether to register to T1", action="store_true")
+parser.add_argument(
+    "--register-to",
+    help="Specify 'T1' to register FLAIR to T1, specify 'FLAIR' to register T1 to FLAIR, or specify none to skip registration",
+    dest="register",
+    nargs="?",
+    default="T1",
+    choices=["T1", "FLAIR", "none"],
+)
 parser.add_argument(
     "--whitestripe", help="Whether to run WhiteStripe", action="store_true"
 )
@@ -233,25 +240,28 @@ if args.analysis_level == "participant":
         for i in range(len(sorted_t1s)):
             if len(sorted_t1s) > 1:
                 if "ses-" in sorted_t1s[i]:
-                    outdir_suffix = "_" + re.search(r"ses-[0-9a-zA-Z]+", sorted_t1s[i])[0]
+                    outdir_suffix = (
+                        "_" + re.search(r"ses-[0-9a-zA-Z]+", sorted_t1s[i])[0]
+                    )
                     if "run-" in sorted_t1s[i]:
-                        outdir_suffix += "_" + re.search(r"run-[0-9]+", sorted_t1s[i])[0]
+                        outdir_suffix += (
+                            "_" + re.search(r"run-[0-9]+", sorted_t1s[i])[0]
+                        )
                 else:
                     outdir_suffix = "_%d" % i
             out_file = os.path.split(sorted_t1s[i])[-1].replace("_T1w.", "_mimosa.")
             Path(args.output_dir + outdir_suffix).mkdir(parents=True, exist_ok=True)
-            cmd = "/run.R --outdir %s --indir %s --flair %s --t1 %s --strip %s --thresh %s" % (
+            cmd = "/run.R --outdir %s --indir %s --flair %s --t1 %s --strip %s --thresh %s --register-to %s" % (
                 args.output_dir + outdir_suffix,
                 os.path.dirname(sorted_t1s[i]),
                 os.path.basename(sorted_flairs[i]),
                 os.path.basename(sorted_t1s[i]),
                 args.strip,
                 args.thresh,
+                args.register,
             )
             if args.n4:
                 cmd += " --n4"
-            if args.register:
-                cmd += " --register"
             if args.whitestripe:
                 cmd += " --whitestripe"
             if args.debug:
