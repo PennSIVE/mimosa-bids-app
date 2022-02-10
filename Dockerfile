@@ -16,11 +16,12 @@ RUN apt-get update && apt-get install -y cmake-curses-gui build-essential zlib1g
     cmake -D CMAKE_INSTALL_PREFIX:STRING=/opt/mass-1.1.1 -D SCHEDULER:STRING=NONE .. && \
     make && make install && chmod -R 775 /opt/mass-1.1.1 && \
     cd / && rm -rf MASS && \
-    apt-get --purge -y autoremove git git-lfs curl
+    apt-get --purge -y autoremove git git-lfs
 # python dependencies + bids validator
 COPY requirements.txt .
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip nodejs npm && \
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+    apt-get update && \
+    apt-get install -y python3 python3-pip nodejs && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
     npm install -g bids-validator && \
     python3 -m pip install -r requirements.txt

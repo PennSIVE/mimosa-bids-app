@@ -218,23 +218,36 @@ if args.analysis_level == "participant":
 
         sorted_t1s = []
         sorted_flairs = []
-        for ses in layout.get_sessions():
-            ses = "ses-" + ses
+        layout_sessions = layout.get_sessions()
+        if len(layout_sessions) == 0:
             # sort in reverse order because the last run is usually the highest quality
-            ses_t1s = sorted(
-                [t1_file for t1_file in t1 if ses in t1_file],
-                reverse=True,
-                key=extract_run,
-            )
-            ses_flairs = sorted(
-                [flair_file for flair_file in flair if ses in flair_file],
-                reverse=True,
-                key=extract_run,
-            )
-            for i in range(min(len(ses_t1s), len(ses_flairs))):
-                sorted_t1s.append(ses_t1s[i])
-                sorted_flairs.append(ses_flairs[i])
-                print("Pairing", ses_t1s[i], "with", ses_flairs[i])
+            t1s = sorted(t1, reverse=True, key=extract_run)
+            flairs = sorted(flair, reverse=True, key=extract_run)
+            smaller = min(len(t1s), len(flairs))
+            for i in range(smaller):
+                sorted_t1s.append(t1s[i])
+                sorted_flairs.append(flairs[i])
+                print("Pairing", t1s[i], "with", flairs[i])
+        else:
+            for ses in layout_sessions:
+                ses = "ses-" + ses
+                t1s = sorted(
+                    [t1_file for t1_file in t1 if ses in t1_file],
+                    reverse=True,
+                    key=extract_run,
+                )
+                flairs = sorted(
+                    [flair_file for flair_file in flair if ses in flair_file],
+                    reverse=True,
+                    key=extract_run,
+                )
+                smaller = min(len(t1s), len(flairs))
+                for i in range(smaller):
+                    sorted_t1s.append(t1s[i])
+                    sorted_flairs.append(flairs[i])
+                    print("Pairing", t1s[i], "with", flairs[i])
+            if len(sorted_t1s) == 0:
+                raise Exception("Subject %s has at least 1 T1w and FLAIR, but not in the same session" % subject_label)
 
         outdir_suffix = ""
         for i in range(len(sorted_t1s)):
